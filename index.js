@@ -79,7 +79,7 @@ const displayMovements = function(movements) {
                    ${i + 1} ${type}
                 </div>
            
-                <div class="movements__value">${mov}</div>
+                <div class="movements__value">${mov} €</div>
             </div>
         `
             // Afterbegin last element ko phly dikhaega mtlb reverse order
@@ -88,4 +88,159 @@ const displayMovements = function(movements) {
     })
 }
 
-displayMovements(account1.movements)
+// Method Chaining
+const calcDisplaySummary = function(acc) {
+    const incomes = acc.movements
+        .filter((mov) => mov > 0)
+        .reduce((acc, mov) => acc + mov, 0)
+    labelSumIn.textContent = `${incomes} €`
+
+    const out = acc.movements
+        .filter((mov) => mov < 0)
+        .reduce((acc, mov) => acc + mov, 0)
+    labelSumOut.textContent = `${Math.abs(out)} €`
+
+    const interests = acc.movements
+        .filter((mov) => mov > 0)
+        .map((deposit) => (deposit * acc.interestRate) / 100)
+        .filter((int, i) => int >= 1)
+        .reduce((acc, int) => acc + int, 0)
+    labelSumInterest.textContent = `${interests.toFixed(2)} €`
+}
+
+const calcPrintBalance = function(acc) {
+    const balance = acc.movements.reduce((acc, cur) => acc + cur, 0)
+    acc.balance = balance
+    labelBalance.textContent = `${balance} €`
+}
+
+// Accounts walay array me se hr account me username k initials ka array create krdega
+const createUsernames = function(users) {
+    users.forEach(function(user) {
+        user.username = user.owner
+            .toLowerCase()
+            .split(' ')
+            .map(function(name) {
+                return name[0]
+            })
+            .join('')
+    })
+}
+createUsernames(accounts)
+console.log(accounts)
+
+// const eurToUsd = 1.1
+// const movementsUSD = movements.map((mov) => {
+//     mov * eurToUsd
+// })
+// const moveDescrip = function(movements) {
+//     const movementDescriptions = movements.map((mov, i) => {
+//         console.log(
+//             `Movement ${i + 1}: You ${mov > 0 ? 'deposited' : 'withdrew'} ${Math.abs(
+//         mov,
+//       )}`,
+//         )
+//     })
+// }
+// moveDescrip(account1.movements)
+const movements = [312132, 231322, 132132]
+const eurToUsd = 1.1
+const totalDepositUSD = movements
+    .filter((mov) => mov > 0)
+    .map((mov) => mov * eurToUsd)
+    .reduce((acc, mov) => acc + mov, 0)
+
+console.log(totalDepositUSD)
+
+const updateUI = function(acc) {
+    displayMovements(acc.movements)
+    calcDisplaySummary(acc)
+    calcPrintBalance(acc)
+}
+
+// EventHandlers
+
+let currentAccount
+
+btnLogin.addEventListener('click', function(e) {
+    e.preventDefault()
+
+    currentAccount = accounts.find(
+        (acc) => acc.username === inputLoginUsername.value,
+    )
+
+    if (
+        currentAccount &&
+        currentAccount.pin === Number(inputLoginPin.value) &&
+        currentAccount.username === inputLoginUsername.value
+    ) {
+        console.log(currentAccount)
+        labelWelcome.textContent = `Welcome Back, ${
+      currentAccount.owner.split(' ')[0]
+    }`
+        console.log('Login Successful')
+        inputLoginUsername.value = inputLoginPin.value = ''
+        inputLoginPin.blur()
+        containerApp.style.opacity = 100
+        updateUI(currentAccount)
+    } else {
+        console.log('Login Unsuccessful')
+        containerApp.style.opacity = 0
+    }
+})
+
+btnTransfer.addEventListener('click', function(e) {
+    e.preventDefault()
+    const amount = Number(inputTransferAmount.value)
+    const receiverAcc = accounts.find(
+        (acc) => acc.username === inputTransferTo.value,
+    )
+    inputTransferAmount.value = inputTransferTo.value = ''
+    if (
+        amount > 0 &&
+        receiverAcc &&
+        currentAccount.balance >= amount &&
+        receiverAcc.username !== currentAccount.username
+    ) {
+        console.log('Transfer valid')
+        currentAccount.movements.push(-amount)
+        receiverAcc.movements.push(amount)
+        updateUI(currentAccount)
+    } else {
+        alert('Transfer Invalid')
+    }
+})
+
+btnLoan.addEventListener('click', function(e) {
+    e.preventDefault()
+
+    const amount = Number(inputLoanAmount.value)
+    if (
+        amount > 0 &&
+        currentAccount.movements.some((mov) => mov >= amount * 0.1)
+    ) {
+        currentAccount.movements.push(amount)
+        updateUI(currentAccount)
+    }
+    inputLoanAmount.value = ''
+})
+
+btnClose.addEventListener('click', function(e) {
+    e.preventDefault()
+
+    if (
+        inputCloseUsername.value === currentAccount.username &&
+        Number(inputClosePin.value) === currentAccount.pin
+    ) {
+        console.log('valid user')
+        const index = accounts.findIndex(
+            (acc) => acc.username === currentAccount.username,
+        )
+        console.log(index)
+        accounts.splice(index, 1)
+        containerApp.style.opacity = 0
+    } else {
+        alert('Invalid User')
+    }
+    inputCloseUsername.value = inputClosePin.value = ''
+})
